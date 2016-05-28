@@ -98,7 +98,7 @@ elif which dialog >/dev/null; then
     GET_VERSIONS
     ITEMS_COUNT=$(cat /tmp/LO/lo_v_a | wc -l)
     echo $ITEMS_COUNT
-    ITEMS=$(cat -n /tmp/lo_v_a | sed -z 's/\n/ off /'g)
+    ITEMS=$(cat -n /tmp/LO/lo_v_a | sed -z 's/\n/ off /'g)
     echo $ITEMS
     dialog --backtitle "Processor Selection" --radiolist "Select Processor type:" 10 40 $ITEMS_COUNT $ITEMS 2> /tmp/LO/dialog_result
     DIALOG_RESULT=$(cat /tmp/LO/dialog_result)
