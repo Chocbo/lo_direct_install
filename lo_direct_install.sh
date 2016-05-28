@@ -14,7 +14,7 @@
 DOWNLOAD() {
   echo $1
   rand="$RANDOM `date`"
-  pipe="/tmp/pipe.`echo '$rand' | md5sum | tr -d ' -'`"
+  pipe="/tmp/LO/pipe.`echo '$rand' | md5sum | tr -d ' -'`"
   mkfifo $pipe
   wget -c $1 2>&1 | while read data;do
     if [ "`echo $data | grep '^Length:'`" ]; then
@@ -55,7 +55,8 @@ else
 fi
 }
 GET_VERSIONS(){
-wget -qO- download.documentfoundation.org/libreoffice/stable/ | grep -o '[0-9]\.[0-9]\.[0-9]' | uniq > /tmp/lo_v_a
+touch /tmp/LO/lo_v_a
+wget -qO- download.documentfoundation.org/libreoffice/stable/ | grep -o '[0-9]\.[0-9]\.[0-9]' | uniq > /tmp/LO/lo_v_a
 }
 GET_DL_LINKS(){
 dllink_base=http://download.documentfoundation.org/libreoffice/stable/$VERSION/deb/$ARCH/LibreOffice_$VERSION\_Linux_$ARCH2\_deb.tar.gz
@@ -67,24 +68,34 @@ RM_TMP_FOLDER(){
 rm -rf /tmp/LO/
 }
 
-RM_TMP_FOLDER
+#RM_TMP_FOLDER
 
 ARCH_CHECK
-# first window (greetings)
-zenity --info --width=350 --text="Привет!\n\n Сейчас мы будем устанавливать LibreOffice из .deb-пактов c оф.сайта. \n\n Насколько мы сумели определить - подойдёт $ARCH-битная версия. \n\n Давай уже выберем какую именно... "
-# get available version from LO mirror and show user choice
-GET_VERSIONS
-VERSION=`cat /tmp/lo_v_a | \
-         sed 's/^/FALSE\n/g' | \
-         zenity --width=350 --height=250  --list --radiolist --separator=' ' \
-                --title="Выбор версии" \
-                --text="Пожалуйста выберите версию:" --column="" --column="Files"`
 
-mkdir -p /tmp/LO/{download,deb} && cd /tmp/LO/download
-GET_DL_LINKS
-DOWNLOAD "$dllink_base"
-DOWNLOAD "$dllink_lang"
-DOWNLOAD "$dllink_help"
+if which zenity >/dev/null; then
+    # first window (greetings)
+    zenity --info --width=350 --text="Привет!\n\n Сейчас мы будем устанавливать LibreOffice из .deb-пактов c оф.сайта. \n\n Насколько мы сумели определить - подойдёт $ARCH-битная версия. \n\n Давай уже выберем какую именно... "
+    # get available version from LO mirror and show user choice
+    GET_VERSIONS
+    VERSION=`cat /tmp/LO/lo_v_a | \
+            sed 's/^/FALSE\n/g' | \
+            zenity --width=350 --height=250  --list --radiolist --separator=' ' \
+                    --title="Выбор версии" \
+                    --text="Пожалуйста выберите версию:" --column="" --column="Files"`
+
+    mkdir -p /tmp/LO/{download,deb} && cd /tmp/LO/download
+    GET_DL_LINKS
+    DOWNLOAD "$dllink_base"
+    DOWNLOAD "$dllink_lang"
+    DOWNLOAD "$dllink_help"
+elif which dialog >/dev/null; then
+    echo "dialog support is coming soon, now quitting"
+    exit
+else
+    echo "Zenity is not installed, now quitting"
+    exit
+fi
+
 tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_deb.tar.gz 
 tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_deb_langpack_ru.tar.gz 
 tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_deb_helppack_ru.tar.gz 
