@@ -11,7 +11,7 @@
 # added zenity progressbar based on https://gist.github.com/axidsugar/79f284a4d51a0171eac8
 #
 # zenity-progressbar func
-DOWNLOAD() {
+Z_DOWNLOAD() {
   echo $1
   rand="$RANDOM `date`"
   pipe="/tmp/LO/pipe.`echo '$rand' | md5sum | tr -d ' -'`"
@@ -41,7 +41,11 @@ DOWNLOAD() {
   fi
   rm -f $pipe
 }
-
+D_DOWNLOAD(){
+wget "$1" 2>&1 | \
+    stdbuf -o0 awk '/[.] +[0-9][0-9]?[0-9]?%/ { print substr($0,63,3) }' |\
+    dialog --gauge "Скачиваем LO_$VERSION $2 (файл $3 из 3)" 10 100
+}
 
 # check what architecture is used
 ARCH_CHECK(){
@@ -55,6 +59,7 @@ else
 fi
 }
 GET_VERSIONS(){
+mkdir -p /tmp/LO/{download,deb} && cd /tmp/LO/download
 touch /tmp/LO/lo_v_a
 wget -qO- download.documentfoundation.org/libreoffice/stable/ | grep -o '[0-9]\.[0-9]\.[0-9]' | uniq > /tmp/LO/lo_v_a
 }
@@ -68,7 +73,7 @@ RM_TMP_FOLDER(){
 rm -rf /tmp/LO/
 }
 
-#RM_TMP_FOLDER
+RM_TMP_FOLDER
 
 ARCH_CHECK
 
@@ -83,19 +88,33 @@ if which zenity >/dev/null; then
                     --title="Выбор версии" \
                     --text="Пожалуйста выберите версию:" --column="" --column="Files"`
 
-    mkdir -p /tmp/LO/{download,deb} && cd /tmp/LO/download
+#    mkdir -p /tmp/LO/{download,deb} && cd /tmp/LO/download
     GET_DL_LINKS
-    DOWNLOAD "$dllink_base"
-    DOWNLOAD "$dllink_lang"
-    DOWNLOAD "$dllink_help"
+    Z_DOWNLOAD "$dllink_base"
+    Z_DOWNLOAD "$dllink_lang"
+    Z_DOWNLOAD "$dllink_help"
 elif which dialog >/dev/null; then
-    echo "dialog support is coming soon, now quitting"
+    dialog --title "Hello" --msgbox "Привет!\n\n Сейчас мы будем устанавливать LibreOffice из .deb-пактов c оф.сайта. \n\n Насколько мы сумели определить - подойдёт $ARCH-битная версия. \n\n Давай уже выберем какую именно... " 15 50
+    GET_VERSIONS
+    ITEMS_COUNT=$(cat /tmp/LO/lo_v_a | wc -l)
+    echo $ITEMS_COUNT
+    ITEMS=$(cat -n /tmp/lo_v_a | sed -z 's/\n/ off /'g)
+    echo $ITEMS
+    dialog --backtitle "Processor Selection" --radiolist "Select Processor type:" 10 40 $ITEMS_COUNT $ITEMS 2> /tmp/LO/dialog_result
+    DIALOG_RESULT=$(cat /tmp/LO/dialog_result)
+    VERSION=$(cat  /tmp/LO/lo_v_a | awk " NR == $DIALOG_RESULT ")
+    echo $VERSION
+    #URL="http://upload.wikimedia.org/wikipedia/commons/4/4e/Pleiades_large.jpg"
+    GET_DL_LINKS
+    D_DOWNLOAD "$dllink_base" "base" 1
+    Z_DOWNLOAD "$dllink_lang" "langpack_ru" 2
+    Z_DOWNLOAD "$dllink_help" "helppack_ru" 3
     exit
 else
-    echo "Zenity is not installed, now quitting"
+    echo "Zenity or dialog is not installed, now quitting"
     exit
 fi
-
+#TODO - extract & install process to both of ui
 tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_deb.tar.gz 
 tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_deb_langpack_ru.tar.gz 
 tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_deb_helppack_ru.tar.gz 
