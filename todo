@@ -1,6 +1,6 @@
-1. possibility to cancel on every step
+1. possibility to cancel on every step DONE (in current conditionun, until 2. is not completed)
 2. ui wrap for extract and install process
 3. text-mode install
 4. options as command-line arguments
 5. add english language and switch
-6. rpm-based system support
+6. rpm-based system support - DONE.
