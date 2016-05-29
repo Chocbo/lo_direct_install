@@ -36,8 +36,7 @@ Z_DOWNLOAD() {
   zenity --progress --auto-close --text="Соединение с $1\n\n\n" --width="350" --title="Загрузка"< $pipe
   if [ "`ps -A |grep "$wget_pid"`" ];then
     kill $wget_pid
-    zenity --info --text="Выполнена отмена или случилась непредвиденная ошибка.\nРабота инструмента прекращена." --title="Завершение" --width="350"
-    exit
+    STOP_IT
   fi
   rm -f $pipe
 }
@@ -72,7 +71,10 @@ dllink_help=http://download.documentfoundation.org/libreoffice/stable/$VERSION/d
 RM_TMP_FOLDER(){
 rm -rf /tmp/LO/
 }
-
+STOP_IT(){
+zenity --info --text="Выполнена отмена или случилась непредвиденная ошибка.\nРабота инструмента прекращена." --title="Завершение" --width="350"
+exit
+}
 RM_TMP_FOLDER
 
 ARCH_CHECK
@@ -87,7 +89,15 @@ if which zenity >/dev/null; then
             zenity --width=350 --height=250  --list --radiolist --separator=' ' \
                     --title="Выбор версии" \
                     --text="Пожалуйста выберите версию:" --column="" --column="Files"`
-
+    case $? in
+    0 )
+         if [  -z "$VERSION" ]; then 
+            STOP_IT; 
+         fi
+         ;;
+    1 )
+        STOP_IT
+    esac
 #    mkdir -p /tmp/LO/{download,deb} && cd /tmp/LO/download
     GET_DL_LINKS
     Z_DOWNLOAD "$dllink_base"
