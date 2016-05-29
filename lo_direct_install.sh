@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Libreoffice download .deb script
+# Libreoffice download&install(update) packets from LO mirror script
 # Autors - Rousk,Chocobo
 # http://www.mintlinux.ru/blogs/lin-lichka/ustanovka-openoffice-libreoffice-cherez-terminal.html
 # === Changelog ===
@@ -10,6 +10,22 @@
 # 24/05/16 - v0.2 
 # added zenity progressbar based on https://gist.github.com/axidsugar/79f284a4d51a0171eac8
 #
+CHECK_BASE(){
+if which dpkg >/dev/null; then
+    BASE="deb"
+    PM="dpkg -i"
+elif which rpm >/dev/null; then
+    BASE="rpm"
+    if which dnf >/dev/null; then
+        PM="dnf install -y"
+    elif which yum >/dev/null; then
+        PM="yum localinstall -y"
+    else
+        PM="rpm -i"
+    fi
+fi
+}
+
 # zenity-progressbar func
 Z_DOWNLOAD() {
   echo $1
@@ -58,30 +74,30 @@ else
 fi
 }
 GET_VERSIONS(){
-mkdir -p /tmp/LO/{download,deb} && cd /tmp/LO/download
+mkdir -p /tmp/LO/{download,$BASE} && cd /tmp/LO/download
 touch /tmp/LO/lo_v_a
 wget -qO- download.documentfoundation.org/libreoffice/stable/ | grep -o '[0-9]\.[0-9]\.[0-9]' | uniq > /tmp/LO/lo_v_a
 }
 GET_DL_LINKS(){
-dllink_base=http://download.documentfoundation.org/libreoffice/stable/$VERSION/deb/$ARCH/LibreOffice_$VERSION\_Linux_$ARCH2\_deb.tar.gz
-dllink_lang=http://download.documentfoundation.org/libreoffice/stable/$VERSION/deb/$ARCH/LibreOffice_$VERSION\_Linux_$ARCH2\_deb_langpack_ru.tar.gz
-dllink_help=http://download.documentfoundation.org/libreoffice/stable/$VERSION/deb/$ARCH/LibreOffice_$VERSION\_Linux_$ARCH2\_deb_helppack_ru.tar.gz
+dllink_base=http://download.documentfoundation.org/libreoffice/stable/$VERSION/$BASE/$ARCH/LibreOffice_$VERSION\_Linux_$ARCH2\_$BASE.tar.gz
+dllink_lang=http://download.documentfoundation.org/libreoffice/stable/$VERSION/$BASE/$ARCH/LibreOffice_$VERSION\_Linux_$ARCH2\_$BASE\_langpack_ru.tar.gz
+dllink_help=http://download.documentfoundation.org/libreoffice/stable/$VERSION/$BASE/$ARCH/LibreOffice_$VERSION\_Linux_$ARCH2\_$BASE\_helppack_ru.tar.gz
 }
 # remove temporary downloads folder
 RM_TMP_FOLDER(){
 rm -rf /tmp/LO/
 }
 STOP_IT(){
-zenity --info --text="Выполнена отмена или случилась непредвиденная ошибка.\nРабота инструмента прекращена." --title="Завершение" --width="350"
+zenity --error --text="Выполнена отмена или случилась непредвиденная ошибка.\nРабота инструмента прекращена." --title="Завершение" --width="350"
 exit
 }
 RM_TMP_FOLDER
 
 ARCH_CHECK
-
+CHECK_BASE
 if which zenity >/dev/null; then
     # first window (greetings)
-    zenity --info --width=350 --text="Привет!\n\n Сейчас мы будем устанавливать LibreOffice из .deb-пактов c оф.сайта. \n\n Насколько мы сумели определить - подойдёт $ARCH-битная версия. \n\n Давай уже выберем какую именно... "
+    zenity --info --width=350 --text="Привет!\n\n Сейчас мы будем устанавливать LibreOffice из $BASE-пактов c оф.сайта. \n\n Сейчас можно быть уверенным в следующем- подойдёт $ARCH версия для $BASE-based систем. \n\n Давай уже выберем какую именно... "
     # get available version from LO mirror and show user choice
     GET_VERSIONS
     VERSION=`cat /tmp/LO/lo_v_a | \
@@ -98,13 +114,12 @@ if which zenity >/dev/null; then
     1 )
         STOP_IT
     esac
-#    mkdir -p /tmp/LO/{download,deb} && cd /tmp/LO/download
     GET_DL_LINKS
     Z_DOWNLOAD "$dllink_base"
     Z_DOWNLOAD "$dllink_lang"
     Z_DOWNLOAD "$dllink_help"
 elif which dialog >/dev/null; then
-    dialog --title "Hello" --msgbox "Привет!\n\n Сейчас мы будем устанавливать LibreOffice из .deb-пактов c оф.сайта. \n\n Насколько мы сумели определить - подойдёт $ARCH-битная версия. \n\n Давай уже выберем какую именно... " 15 50
+    dialog --title "Hello" --msgbox "Привет!\n\n Сейчас мы будем устанавливать LibreOffice из .$BASE-пактов c оф.сайта. \n\n Сейчас можно быть уверенным в следующем- подойдёт $ARCH версия для $BASE-based систем. \n\n Давай уже выберем какую именно... " 15 50
     GET_VERSIONS
     ITEMS_COUNT=$(cat /tmp/LO/lo_v_a | wc -l)
     echo $ITEMS_COUNT
@@ -114,7 +129,6 @@ elif which dialog >/dev/null; then
     DIALOG_RESULT=$(cat /tmp/LO/dialog_result)
     VERSION=$(cat  /tmp/LO/lo_v_a | awk " NR == $DIALOG_RESULT ")
     echo $VERSION
-    #URL="http://upload.wikimedia.org/wikipedia/commons/4/4e/Pleiades_large.jpg"
     GET_DL_LINKS
     D_DOWNLOAD "$dllink_base" "base" 1
     D_DOWNLOAD "$dllink_lang" "langpack_ru" 2
@@ -124,9 +138,9 @@ else
     exit
 fi
 #TODO - extract & install process to both of ui
-tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_deb.tar.gz 
-tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_deb_langpack_ru.tar.gz 
-tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_deb_helppack_ru.tar.gz 
-find /tmp/LO/download/ -name *.deb -exec mv -t /tmp/LO/deb/ {} +
-cd /tmp/LO/deb/
-sudo dpkg --install *.deb
+tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_$BASE.tar.gz 
+tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_$BASE\_langpack_ru.tar.gz 
+tar -xvf LibreOffice_$VERSION\_Linux_$ARCH2\_$BASE\_helppack_ru.tar.gz 
+find /tmp/LO/download/ -name *.$BASE -exec mv -t /tmp/LO/$BASE/ {} +
+cd /tmp/LO/$BASE/
+sudo $PM *.$BASE
