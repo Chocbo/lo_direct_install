@@ -107,9 +107,8 @@ elif which dialog >/dev/null; then
     #URL="http://upload.wikimedia.org/wikipedia/commons/4/4e/Pleiades_large.jpg"
     GET_DL_LINKS
     D_DOWNLOAD "$dllink_base" "base" 1
-    Z_DOWNLOAD "$dllink_lang" "langpack_ru" 2
-    Z_DOWNLOAD "$dllink_help" "helppack_ru" 3
-    exit
+    D_DOWNLOAD "$dllink_lang" "langpack_ru" 2
+    D_DOWNLOAD "$dllink_help" "helppack_ru" 3
 else
     echo "Zenity or dialog is not installed, now quitting"
     exit
