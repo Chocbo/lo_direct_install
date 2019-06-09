@@ -8,7 +8,7 @@
 # checking architecture and choice available versions with zenity
 #
 # 24/05/16 - v0.2 
-# added zenity progressbar based on https://gist.github.com/axidsugar/79f284a4d51a0171eac8
+# added zenity progressbar based on https://gist.github.com/felix-orduz/79f284a4d51a0171eac8
 #
 CHECK_BASE(){
 if which dpkg >/dev/null; then
